@@ -24,3 +24,6 @@ Another example script will visualize the NEB path finding between two Li atoms 
 `python chgcar_neb_animation.py example_calculations/Li3SeF_Pm-3m/charge_density/CHGCAR`
 
 The `chgcar_neb.py` file is included as an example on how to process multiple CHGCARs in a batch job.
+
+# Acknowledgements
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 957189.
