@@ -1,3 +1,5 @@
+![Logo of densityNEB software for calculating path of least resistance between two points in a scalar field using nudged elastic band](logo/logo.svg?raw=true "densityNEB logo")
+
 # densityNEB
 Code for calculating the path of least resistance between two points in a scalar field using nudged elastic band (NEB).
 
