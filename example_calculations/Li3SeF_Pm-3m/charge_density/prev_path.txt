@@ -1,0 +1,1 @@
+/home/energy/benjas/PhD/Li_charge_density/calculations/Li3SeF_Pm-3m/vasp/fm_1/30/PBE/none/520/-5/0.05/3/PBE-F-Li_sv-Se/-0.02
