@@ -28,15 +28,18 @@ class pbar:
     def update(self, N=None):
         pass
 
+
 class Eggcarton(torch.nn.Module):
     def forward(self, x):
         return (x * (2 * torch.pi)).cos().sum(dim=-1)
+
 
 class OptimConfig:
     def __init__(self, nsteps: int, algorithm_type, algorithm_args: dict):
         self.nsteps = nsteps
         self.algorithm_type = algorithm_type
         self.algorithm_args = algorithm_args
+
 
 class NEBConfig:
     def __init__(self, optim_config: OptimConfig):
@@ -46,8 +49,12 @@ class NEBConfig:
         self.optim_config = optim_config
         self.spring_constant = float("inf")
 
+
 class NEB():
-    def __init__(self, model, path_coords: Tensor, target_distances: Tensor = None, spring_constant: Union[str, float] = "inf"):
+    def __init__(
+        self, model, path_coords: Tensor, target_distances: Tensor = None,
+        spring_constant: Union[str, float] = "inf"
+    ):
         """
         Creates a NEB instance that is prepared for evaluating the band.
         """
@@ -59,7 +66,9 @@ class NEB():
 
     def _assert_grad(self):
         if self.path_coords.grad is None:
-            self.path_coords.grad = self.path_coords.new(self.path_coords.shape).zero_()
+            self.path_coords.grad = self.path_coords.new(
+                self.path_coords.shape
+            ).zero_()
 
     def parameters(self):
         return [self.path_coords]
@@ -71,7 +80,10 @@ class NEB():
         # Redistribute if spring_constant == inf
         assert self.target_distances is not None or not gradient, "Cannot compute gradient if target distances are unavailable"
         if gradient and self.spring_constant == float("inf"):
-            self.path_coords[:] = distribute_by_weights(self.path_coords, self.path_coords.shape[0], weights=self.target_distances).data
+            self.path_coords[:] = distribute_by_weights(
+                self.path_coords, self.path_coords.shape[0],
+                weights=self.target_distances
+            ).data
             # print(self.path_coords)
 
         # Assert gradient storage is available
@@ -95,22 +107,33 @@ class NEB():
 
         # Compute NEB gradients as in (Henkelmann & Jonsson, 2000)
         if gradient:
-            distances = (self.path_coords[:-1] - self.path_coords[1:]).norm(2, 1)
+            distances = (
+                self.path_coords[:-1] - self.path_coords[1:]
+            ).norm(2, 1)
             for i in range(1, npivots - 1):
                 d_prev, d_next = distances[i - 1].item(), distances[i].item()
-                td_prev, td_next = self.target_distances[i - 1].item(), self.target_distances[i].item()
-                l_prev, loss, l_next = losses[i - 1].item(), losses[i].item(), losses[i + 1].item()
+                td_prev = self.target_distances[i - 1].item()
+                td_next = self.target_distances[i].item()
+                l_prev = losses[i - 1].item()
+                loss = losses[i].item()
+                l_next = losses[i + 1].item()
 
                 # Compute tangent
-                tangent = self.compute_tangent(d_next, d_prev, i, l_next, l_prev, loss)
+                tangent = self.compute_tangent(
+                    d_next, d_prev, i, l_next, l_prev, loss
+                )
 
                 # Project gradients perpendicular to tangent
-                self.path_coords.grad[i] -= self.path_coords.grad[i].dot(tangent) * tangent
+                self.path_coords.grad[i] -= self.path_coords.grad[i].dot(
+                    tangent
+                ) * tangent
 
                 assert self.spring_constant > 0
                 if self.spring_constant < float("inf"):
                     # Spring force parallel to tangent
-                    self.path_coords.grad[i] += ((d_prev - td_prev) - (d_next - td_next)) * self.spring_constant * tangent
+                    self.path_coords.grad[i] += (
+                        (d_prev - td_prev) - (d_next - td_next)
+                    ) * self.spring_constant * tangent
 
         return losses.max().item()
 
@@ -134,8 +157,12 @@ class NEB():
             return (self.path_coords[i + 1] - self.path_coords[i]) / d_next
 
     def iterate_densely(self, sub_pivot_count=9):
-        dense_pivot_count = (self.path_coords.shape[0] - 1) * (sub_pivot_count + 1) + 1
-        alphas = linspace(0, 1, sub_pivot_count + 2)[:-1].to(self.path_coords.device)
+        dense_pivot_count = (
+            self.path_coords.shape[0] - 1
+        ) * (sub_pivot_count + 1) + 1
+        alphas = linspace(
+            0, 1, sub_pivot_count + 2
+        )[:-1].to(self.path_coords.device)
         for i in pbar(range(dense_pivot_count), "Saddle analysis"):
             base_pivot = i // (sub_pivot_count + 1)
             sub_pivot = i % (sub_pivot_count + 1)
@@ -146,7 +173,8 @@ class NEB():
             else:
                 # Or interpolation between pivots
                 alpha = alphas[sub_pivot]
-                coords = self.path_coords[base_pivot] * (1 - alpha) + self.path_coords[base_pivot + 1] * alpha
+                coords = self.path_coords[base_pivot] * \
+                    (1 - alpha) + self.path_coords[base_pivot + 1] * alpha
 
             # Retrieve values from model analysis
             with torch.no_grad():
@@ -164,8 +192,10 @@ class NEB():
             dense_coords.append(coord)
 
         # Compute lengths
-        end_to_end_distance = (self.path_coords[-1] - self.path_coords[0]).norm(2)
-        analysis["lengths"] = (self.path_coords[1:] - self.path_coords[:-1]).norm(2, 1) / end_to_end_distance
+        end_to_end_distance = (
+            self.path_coords[-1] - self.path_coords[0]).norm(2)
+        analysis["lengths"] = (
+            self.path_coords[1:] - self.path_coords[:-1]).norm(2, 1) / end_to_end_distance
         analysis["length"] = end_to_end_distance
         analysis["dense_vals"] = dense_vals
         analysis["dense_coords"] = torch.stack(dense_coords, dim=0)
@@ -173,9 +203,13 @@ class NEB():
         return analysis
 
 
-def distribute_by_weights(path: Tensor, nimages: int, path_target: Tensor = None, weights: Tensor = None, climbing_pivots: list = None):
+def distribute_by_weights(
+    path: Tensor, nimages: int, path_target: Tensor = None,
+    weights: Tensor = None, climbing_pivots: list = None
+):
     """
-    Redistribute the pivots on the path so that they are spaced as given by the weights.
+    Redistribute the pivots on the path so that they are spaced as given by
+    the weights.
     """
     # Ensure storage for coordinates
     if path_target is None:
@@ -194,11 +228,15 @@ def distribute_by_weights(path: Tensor, nimages: int, path_target: Tensor = None
     if climbing_pivots is not None:
         assert path.shape[0] == nimages, "Cannot change number of items when reinterpolating with respect to climbing images."
         assert len(climbing_pivots) == nimages
-        assert all(isinstance(b, bool) for b in climbing_pivots), "Image must be climbing or not."
+        assert all(isinstance(b, bool) for b in climbing_pivots), "Image must be climbing or not."  # noqa
         start = 0
         for i, is_climbing in enumerate(climbing_pivots):
             if is_climbing or i == nimages - 1:
-                distribute_by_weights(path[start:i + 1], i + 1 - start, path_target[start:i + 1], weights[start:i])
+                distribute_by_weights(
+                    path[start:i + 1],
+                    i + 1 - start, path_target[start:i + 1],
+                    weights[start:i]
+                )
                 start = i
         return path_target
 
@@ -210,12 +248,16 @@ def distribute_by_weights(path: Tensor, nimages: int, path_target: Tensor = None
 
     # The current distances between elements on chain
     current_distances = (path_source[:-1] - path_source[1:]).norm(2, 1)
-    target_positions = (weights / weights.sum()).cumsum(0) * current_distances.sum()  # Target positions of elements (spaced by weights)
+    # Target positions of elements (spaced by weights)
+    target_positions = (
+        weights / weights.sum()
+    ).cumsum(0) * current_distances.sum()
 
     # Put each new item spaced by weights (measured along line) on the line
     last_idx = 0  # Index of previous pivot
     pos_prev = 0.  # Position of previous pivot on chain
-    pos_next = current_distances[last_idx].item()  # Position of next pivot on chain
+    # Position of next pivot on chain
+    pos_next = current_distances[last_idx].item()
     path_target[0] = path_source[0]
     for i in range(1, nimages - 1):
         position = target_positions[i - 1].item()
@@ -225,21 +267,31 @@ def distribute_by_weights(path: Tensor, nimages: int, path_target: Tensor = None
             pos_next += current_distances[last_idx].item()
 
         t = (position - pos_prev) / (pos_next - pos_prev)
-        path_target[i] = (t * path_source[last_idx + 1] + (1 - t) * path_source[last_idx])
+        path_target[i] = (
+            t * path_source[last_idx + 1] + (1 - t) * path_source[last_idx]
+        )
     path_target[nimages - 1] = path_source[-1]
 
     return path_target
 
+
 def neb(previous_cycle_data, model, neb_config: NEBConfig, save_path_history=False) -> dict:
     # Initialise chain by inserting pivots
-    start_path, target_distances = neb_config.insert_method(previous_cycle_data, **neb_config.insert_args)
+    start_path, target_distances = neb_config.insert_method(
+        previous_cycle_data, **neb_config.insert_args
+    )
 
     # Model
-    neb_mod = NEB(model, start_path, target_distances, spring_constant=neb_config.spring_constant)
+    neb_mod = NEB(
+        model, start_path, target_distances,
+        spring_constant=neb_config.spring_constant
+    )
 
     # Load optimiser
     optim_config = neb_config.optim_config
-    optimiser = optim_config.algorithm_type(neb_mod.parameters(), **optim_config.algorithm_args)
+    optimiser = optim_config.algorithm_type(
+        neb_mod.parameters(), **optim_config.algorithm_args
+    )
 
     # Optimise
     path_history = []
@@ -290,13 +342,18 @@ def test_neb():
     grid_eval = model(grid_stacked)
 
     plt.figure()
-    plt.imshow(grid_eval, interpolation="none", origin="upper", extent=[0, 2, 2, 0])
+    plt.imshow(
+        grid_eval, interpolation="none", origin="upper", extent=[0, 2, 2, 0]
+    )
     final_path = result["path_coords"]
     plt.plot(path_coords[:, 0], path_coords[:, 1], '-o')
     plt.plot(final_path[:, 0], final_path[:, 1], '-x')
     plt.figure()
-    plt.plot(np.linspace(0, 1, len(result["dense_vals"])), result["dense_vals"], '.')
+    plt.plot(np.linspace(
+        0, 1, len(result["dense_vals"])
+    ), result["dense_vals"], '.')
     plt.show()
+
 
 if __name__ == "__main__":
     # Setup logging
