@@ -7,9 +7,20 @@ import torch
 from ase.calculators.vasp import VaspChargeDensity
 from densityNEB import fill, torchneb
 from densityNEB.interpolate_grid import Interpolator, calculate_grid_pos
-from mayavi import mlab
 
-mlab.options.offscreen = True
+# Mock mayavi to run without it installed
+try:
+    from mayavi import mlab
+    mlab.options.offscreen = True
+except ImportError:
+    class MLab:
+        def noop(*args, **kwargs):
+            pass
+
+        def __getattr__(self, __name):
+            return self.noop
+
+    mlab = MLab()
 
 
 def run_neb(vasp_charge_file: Path, output_dir: Path):

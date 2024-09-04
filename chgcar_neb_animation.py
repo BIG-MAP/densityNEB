@@ -7,7 +7,32 @@ import torch
 from ase.calculators.vasp import VaspChargeDensity
 from densityNEB import fill, torchneb
 from densityNEB.interpolate_grid import Interpolator, calculate_grid_pos
-from mayavi import mlab
+
+# Mock mayavi to run without it installed
+try:
+    from mayavi import mlab
+except ImportError:
+    from functools import partial, wraps
+
+    class MLab:
+        def animate(self, func=None, *, delay=None):
+            if func is None:
+                return partial(self.animate, delay=delay)
+
+            delay = 0
+
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper
+
+        def noop(*args, **kwargs):
+            pass
+
+        def __getattr__(self, __name):
+            return self.noop
+
+    mlab = MLab()
 
 
 def get_path_length(coords: np.ndarray):
