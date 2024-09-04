@@ -1,0 +1,39 @@
+[build-system]
+requires = [
+    "setuptools>=65",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "densityNEB"
+version = "0.1.1"
+authors = [
+    {name = "Peter Bjørn Jørgensen", email = "peterbjorgensen@gmail.com"}
+]
+description = "Code for calculating the path of least resistance between two points in a scalar field using nudged elastic band (NEB)"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = []
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "torch",
+    "numpy<2",
+    "matplotlib",
+    "ase"
+]
+
+[project.optional-dependencies]
+viewer = ["mayavi", "configobj", "PyQt5"]
+
+[project.urls]
+Repository = "https://github.com/BIG-MAP/densityNEB"
