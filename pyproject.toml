@@ -29,7 +29,7 @@ dependencies = [
     "torch",
     "numpy<2",
     "matplotlib",
-    "ase"
+    "ase!=3.23.0"
 ]
 
 [project.optional-dependencies]
